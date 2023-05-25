@@ -103,14 +103,15 @@ def compile_code_and_tests_into_py(
     content = ""
 
     for testcase in code_blocks.cases:
-        print("Writing in testcase", testcase)
+        print(f"Adding code for {testcase}")
         code_content = code_blocks.get_code_for_testcase(testcase)
         test_content = test_blocks.get_code_for_testcase(testcase)
         test_content += "\nreturn\n"
 
         content += code_content
         content += "\n"
-        if len(test_content) > 0:
+        if len(test_content) > 8:
+            print(f"Adding test for {testcase}")
             content += f"if {part_name} == \"{testcase}\":\n"
             content += indent(test_content, "\t")
 
