@@ -2,3 +2,5 @@ Untitled*
 *.ju.py
 jupynium*
 __pycache__
+dist
+src/*.egg-info
