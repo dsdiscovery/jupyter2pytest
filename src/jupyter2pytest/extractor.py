@@ -1,13 +1,16 @@
-from typing import List, Dict, Callable
+from typing import List, Dict
 from collections import defaultdict
 from re import compile
-from random import choices
-from string import ascii_lowercase, ascii_uppercase
-from textwrap import indent
 
 import nbformat
 
 class TestcellBlock:
+    """Class for associating testcases with code blocks.
+
+    Attributes: 
+        cases: List of all cases in notebook file (i.e. list of 'things' extracted)
+        blocks: Association of cases with code blocks corresponding to them.
+    """
     cases: List[str]
     blocks: Dict[str, List[str]]
 
@@ -22,38 +25,46 @@ class TestcellBlock:
             testcase: str, 
             code: str
         ):
+        """Adds a block of code corresponding to a testcase.
+
+        Args:
+            testcase: The testcase that this code belongs to.
+            code: The code block to add.
+        """
         block = self.blocks[testcase]
         if len(block) == 0:
             self.cases.append(testcase)
 
         block.append(code)
 
-    # def compile_into_py(
-    #         self,
-    #         cases: List[str] = [],
-    #         transform_block: Callable[[str], str] = lambda x: x
-    #     ) -> str:
-    #     if len(cases) == 0:
-    #         cases = self.cases
-    #
-    #     py_code = ""
-    #     for testcase in cases:
-    #         section = "\n".join(self.blocks[testcase])
-    #         py_code += transform_block(section)
-    #
-    #     return py_code
-
     def get_code_for_testcase(
             self,
             testcase: str
         ) -> str:
+        """Gets all code corresponding to a given testcase.
+
+        Args:
+            testcase: The testcase to get code for.
+
+        Returns:
+            All blocks of code corresponding to the testcase, joined by newlines.
+        """
         if testcase in self.cases:
             return "\n".join(self.blocks[testcase])
         else:
             return ""
+
 def open_notebook(
         path: str    
     ) -> nbformat.NotebookNode:
+    """Opens a python notebook at a given path as a NotebookNode object.
+
+    Args:
+        path: Path to the ipynb file.
+
+    Returns:
+        NotebookNode object representing the notebook.
+    """
     with open(path, "r") as nfp:
         notebook = nbformat.read(nfp, as_version=4)
     return notebook
@@ -90,35 +101,3 @@ def extract_with_prefix(
     
     return per_testcase_code
 
-def compile_code_and_tests_into_py(
-    code_blocks: TestcellBlock,
-    test_blocks: TestcellBlock
-    ):
-    part_name = choices(ascii_lowercase + ascii_uppercase, k=20)
-    part_name = "".join(part_name)
-
-    func_name = choices(ascii_lowercase + ascii_uppercase, k=20)
-    func_name = "".join(func_name)
-    py_code = f"def {func_name}({part_name}):\n"
-    content = ""
-
-    for testcase in code_blocks.cases:
-        print(f"Adding code for {testcase}")
-        code_content = code_blocks.get_code_for_testcase(testcase)
-        test_content = test_blocks.get_code_for_testcase(testcase)
-        test_content += "\nreturn\n"
-
-        content += code_content
-        content += "\n"
-        if len(test_content) > 8:
-            print(f"Adding test for {testcase}")
-            content += f"if {part_name} == \"{testcase}\":\n"
-            content += indent(test_content, "\t")
-
-    py_code += indent(content, "\t")
-    py_code += "\n"
-
-    for testcase in test_blocks.cases:
-        py_code += f"def test_{testcase}():\n\t{func_name}(\"{testcase}\")\n\n"
-
-    return py_code
