@@ -9,33 +9,57 @@ class TestcellBlock:
 
     Attributes: 
         cases: List of all cases in notebook file (i.e. list of 'things' extracted)
-        blocks: Association of cases with code blocks corresponding to them.
+        code_blocks: Association of cases with code blocks corresponding to them.
+        test_blocks: Association of cases with test code blocks corresponding to them.
+        temp_code_blocks: List of code blocks that have not yet been associated with a testcase.
     """
     cases: List[str]
-    blocks: Dict[str, List[str]]
+    code_blocks: Dict[str, List[str]]
+    test_blocks: Dict[str, List[str]]
+    temp_code_blocks: List[str]
 
     def __init__(
             self
-        ):
+        ) -> None:
         self.cases = []
-        self.blocks = defaultdict(lambda: [])
+        self.code_blocks = defaultdict(lambda: [])
+        self.temp_code_blocks = []
+        self.test_blocks = defaultdict(lambda: [])
 
     def add_codeblock(
             self, 
-            testcase: str, 
             code: str
-        ):
+        ) -> None:
+        """Adds a block of code corresponding to a testcase. This will be added
+            to the next testcase that is added.
+
+        Args:
+            code: The code block to add.
+        """
+        
+        self.temp_code_blocks.append(code)
+
+    def add_testblock(
+        self,
+        testcase: str,
+        code: str
+        ) -> None:
+
         """Adds a block of code corresponding to a testcase.
 
         Args:
-            testcase: The testcase that this code belongs to.
-            code: The code block to add.
+            testcase: The name of the testcase to add.
+            code: The code corresponding to the testcase.
         """
-        block = self.blocks[testcase]
-        if len(block) == 0:
-            self.cases.append(testcase)
+        self.test_blocks[testcase].append(code)
 
-        block.append(code)
+        if len(self.temp_code_blocks) > 0:
+            self.code_blocks[testcase] = self.temp_code_blocks
+
+        self.temp_code_blocks = []
+
+        if testcase not in self.cases:
+            self.cases.append(testcase)
 
     def get_code_for_testcase(
             self,
@@ -50,7 +74,24 @@ class TestcellBlock:
             All blocks of code corresponding to the testcase, joined by newlines.
         """
         if testcase in self.cases:
-            return "\n".join(self.blocks[testcase])
+            return "\n".join(self.code_blocks[testcase])
+        else:
+            return ""
+
+    def get_test_for_testcase(
+        self,
+        testcase: str
+        ) -> str:
+        """Gets all test code corresponding to a given testcase.
+
+        Args:
+            testcase: The testcase to get code for.
+
+        Returns:
+            All blocks of code corresponding to the testcase, joined by newlines.
+        """
+        if testcase in self.cases:
+            return "\n".join(self.test_blocks[testcase])
         else:
             return ""
 
@@ -74,18 +115,19 @@ def extract_with_prefix(
         prefix: str
     ) -> TestcellBlock:
     """Extract code blocks from a notebook matching a given prefix.
+        Note: Code blocks are generated as those blocks that do not match the prefix and
+        occur before the testcase has been defined.
 
     Args:
         notebook: Notebook to extract code blocks from.
         prefix: Regex prefix to both decide if a block is extaction worthy, and to extract the testcase name.
-                E.g. "### ASSIGNMENT CODE for Puzzle (.*) ==" 
+                E.g. "### TEST CASE for Puzzle (.*) ==" 
 
     Returns:
         TestcellBlock object associating testcase names with code blocks.
     """
     per_testcase_code = TestcellBlock()
     pat = compile(prefix)
-    clean_pat = compile('\W|^(?=\d)')
 
     for cell in notebook.cells:
         if cell.cell_type == "code":
@@ -96,8 +138,9 @@ def extract_with_prefix(
             re_match = pat.fullmatch(first_line)
             if re_match is not None:
                 testcase_name = re_match.group(1)
-                testcase_name = clean_pat.sub("_", testcase_name)
-                per_testcase_code.add_codeblock(testcase_name, rest)
+                per_testcase_code.add_testblock(testcase_name, rest)
+            else:
+                per_testcase_code.add_codeblock(source)
     
     return per_testcase_code
 
