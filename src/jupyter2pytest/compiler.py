@@ -1,7 +1,7 @@
 from random import choices
 from string import ascii_lowercase, ascii_uppercase
 from textwrap import indent
-from regex import compile as re_compile
+from re import compile as re_compile
 import pkgutil
 
 from .extractor import TestcellBlock 
