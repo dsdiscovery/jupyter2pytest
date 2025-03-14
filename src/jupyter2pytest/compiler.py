@@ -60,7 +60,7 @@ def compile_code_and_tests_into_py(
             assignment_code = code_content,
             test_code = test_content,
             argument = part_name,
-            test_part = testcase
+            test_part = testcase.replace('"', '\\"')
         )
 
     test_code = indent(test_code, "    ")
